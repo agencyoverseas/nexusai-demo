@@ -795,10 +795,10 @@ const VAPI_ASSISTANT_ID = "f5c6df8b-2d3b-47da-ad37-3f4e1d9b726d";
 
 // 4 voix Cartesia FR (le prospect choisit) — IDs officiels Cartesia
 const VOICES = {
-  f1: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "a249eaff-1e96-4d2c-b23b-12efa4f66f41", speed: 1.0 }, // French Conversational Lady — chaleureuse
-  f2: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "8832a0b5-47b2-4751-bb22-6a8e2149303d", speed: 1.0 }, // French Narrator Lady — posée
-  h1: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "0418348a-0ca2-4e90-9986-800fb8b3bbc0", speed: 1.0 }, // Stern French Man — assuré
-  h2: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "79f8b5fb-2cc8-479a-80df-29f7a7cf1a3e", speed: 1.0 }  // Nonfiction Man — neutre
+  f1: { provider: "cartesia", model: "sonic-2", voiceId: "a249eaff-1e96-4d2c-b23b-12efa4f66f41" }, // French Conversational Lady — chaleureuse
+  f2: { provider: "cartesia", model: "sonic-2", voiceId: "8832a0b5-47b2-4751-bb22-6a8e2149303d" }, // French Narrator Lady — posée
+  h1: { provider: "cartesia", model: "sonic-2", voiceId: "0418348a-0ca2-4e90-9986-800fb8b3bbc0" }, // Stern French Man — assuré
+  h2: { provider: "cartesia", model: "sonic-2", voiceId: "79f8b5fb-2cc8-479a-80df-29f7a7cf1a3e" }  // Nonfiction Man — neutre
 };
 let pickedVoice = "f1";
 const VOICE_LABELS = { f1: "Femme · chaleureuse", f2: "Femme · posée", h1: "Homme · assuré", h2: "Homme · neutre" };
@@ -828,6 +828,7 @@ const btn = el("d-btn-call");
 const lbl = btn && btn.querySelector(".dlbl");
 const IDLE = "Parler à l'agent maintenant";
 const say = (msg, type) => { const s = el("d-status-3"); if (s) { s.textContent = msg || ""; s.className = "dstatus" + (type ? " " + type : ""); } };
+const errText = (e) => { try { if (!e) return ""; if (typeof e === "string") return e; const x = e.error ?? e.errorMsg ?? e.message ?? e; if (typeof x === "string") return x; if (x && x.message) return x.message; return JSON.stringify(x).slice(0, 240); } catch (_) { return ""; } };
 
 // sélecteur de voix (bloqué pendant un appel en cours)
 const pills = Array.prototype.slice.call(document.querySelectorAll(".vp"));
@@ -869,13 +870,13 @@ if (btn) btn.addEventListener("click", async () => {
       vapi = new Vapi(VAPI_PUBLIC_KEY);
       vapi.on("call-start", () => { live = true; btn.disabled = false; if (lbl) lbl.textContent = "Raccrocher"; say("En ligne — parle, l'agent t'écoute.", "ok"); });
       vapi.on("call-end",   () => { live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE; say("Démo terminée. Relance quand tu veux.", "ok"); });
-      vapi.on("error", (e) => { console.error("Vapi error", e); live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE; say("Souci de connexion à l'agent. Réessaie.", "err"); });
+      vapi.on("error", (e) => { console.error("Vapi error", e); live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE; say("Erreur agent : " + (errText(e) || "connexion impossible") + " — réessaie.", "err"); });
     }
     await vapi.start(VAPI_ASSISTANT_ID, buildOverrides());
   } catch (e) {
     console.error(e);
     live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE;
-    say("Micro refusé ou agent injoignable. Réessaie.", "err");
+    say("Échec démarrage : " + (errText(e) || "micro refusé ou agent injoignable") + " — réessaie.", "err");
   }
 });
 </script>
