@@ -430,7 +430,13 @@ select.dinput{appearance:none;-webkit-appearance:none;background-image:url("data
     <!-- Étape 3 : débloqué -->
     <div class="dstep" id="d-step-3">
       <p class="dstep-title">3 · Compte vérifié</p>
-      <p class="dstep-text">Tout est bon<b id="d-welcome"></b>. Lance la démo : l'agent te parle directement ici, au micro.</p>
+      <p class="dstep-text">Tout est bon<b id="d-welcome"></b>. Choisissez la voix, puis lancez la démo : l'agent vous parle directement ici, au micro.</p>
+      <div class="vp-grid" id="d-voice-pick" role="radiogroup" aria-label="Choix de la voix de l'agent">
+        <button class="vp" type="button" data-voice="f1" aria-pressed="true">Femme · chaleureuse</button>
+        <button class="vp" type="button" data-voice="f2" aria-pressed="false">Femme · posée</button>
+        <button class="vp" type="button" data-voice="h1" aria-pressed="false">Homme · assuré</button>
+        <button class="vp" type="button" data-voice="h2" aria-pressed="false">Homme · neutre</button>
+      </div>
       <button class="btn btn-gold demo-btn" id="d-btn-call">
         <span class="dlbl">Parler à l'agent maintenant</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -766,28 +772,57 @@ $("d-btn-verify").addEventListener("click", async ()=>{
 /* Étape 3 : l'appel se fait en web call (micro navigateur) — voir le module Vapi en bas de page. */
 </script>
 
+<style>
+.vp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 14px}
+.vp{padding:11px 12px;border-radius:12px;border:1.5px solid rgba(213,181,111,.35);background:rgba(213,181,111,.06);color:inherit;font:600 14px/1.2 inherit;cursor:pointer;transition:border-color .18s,background .18s}
+.vp[aria-pressed="true"]{border-color:#D5B56F;background:rgba(213,181,111,.18);box-shadow:inset 0 0 0 1px rgba(213,181,111,.45)}
+</style>
 <!-- ====== WEB CALL VAPI (l'agent parle dans le navigateur, au micro) ====== -->
 <script type="module">
 const VAPI_PUBLIC_KEY   = "c3f6b612-d839-457a-9050-d97d58b5e2a5";  // cle publique Vapi (safe cote client)
 const VAPI_ASSISTANT_ID = "f5c6df8b-2d3b-47da-ad37-3f4e1d9b726d";
 
-const OVERRIDES = {
-  firstMessage: "Bonjour et bienvenue ! Je suis l'assistant vocal de démonstration de NexusAI. Je peux prendre une réservation, donner les horaires, ou répondre à vos questions. Comment puis-je vous aider ?",
-  maxDurationSeconds: 120,
-  transcriber: { provider: "deepgram", model: "nova-2", language: "fr" },
-  voice: { provider: "openai", voiceId: "shimmer" },
-  model: {
-    provider: "openai",
-    model: "gpt-4o-mini",
-    messages: [{ role: "system", content: "Tu es l'assistant vocal de démonstration de NexusAI, une agence d'agents IA pour les commerces des Antilles-Guyane. Tu parles uniquement en français, phrases courtes, voix posée et chaleureuse, jamais robotique. Objectif : montrer en moins de deux minutes comment un agent IA gère un appel client réel — prendre une réservation ou un rendez-vous, donner horaires et infos, répondre aux questions courantes. Mène un mini-scénario concret selon ce que dit la personne. Confirme et récapitule la demande. Termine en rappelant que c'est une démonstration NexusAI, que ce type d'agent répond 24 heures sur 24 à la place d'un répondeur, et invite à en parler avec l'équipe. Ne promets pas de vrais services, ne demande aucune donnée sensible. Question hors sujet : réponds brièvement puis reviens à la démo." }]
-  }
+// 4 voix Cartesia FR (le prospect choisit) — IDs officiels Cartesia
+const VOICES = {
+  f1: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "a249eaff-1e96-4d2c-b23b-12efa4f66f41", speed: 1.0 }, // French Conversational Lady — chaleureuse
+  f2: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "8832a0b5-47b2-4751-bb22-6a8e2149303d", speed: 1.0 }, // French Narrator Lady — posée
+  h1: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "0418348a-0ca2-4e90-9986-800fb8b3bbc0", speed: 1.0 }, // Stern French Man — assuré
+  h2: { provider: "cartesia", model: "sonic-2", language: "fr", voiceId: "79f8b5fb-2cc8-479a-80df-29f7a7cf1a3e", speed: 1.0 }  // Nonfiction Man — neutre
 };
+let pickedVoice = "f1";
+const MAX_SECONDS = 120; // plafond 2 min (démos prospect). Rappel : tu paies le temps réellement parlé, pas le plafond.
+
+const SYSTEM_PROMPT = "Tu es l'assistant vocal de démonstration de NexusAI, une agence d'agents IA pour les commerces des Antilles-Guyane. Tu parles uniquement en français, ton professionnel et chaleureux, accueillant, naturel, jamais robotique. Vouvoie la personne. Phrases courtes, une seule question à la fois. Déroulé à suivre : 1) Tu te présentes brièvement comme l'assistant vocal de démonstration de NexusAI. 2) Tu demandes dans quel domaine ou secteur la personne travaille (restaurant, salon de coiffure ou beauté, autre commerce). 3) Selon sa réponse, tu enchaînes une courte démonstration ADAPTÉE à son secteur : tu joues l'agent qui répond à un appel client typique de ce métier — par exemple prendre une réservation de table avec l'horaire pour un restaurant, ou fixer un rendez-vous pour une prestation dans un salon. Reste concret, mène le mini-scénario, confirme et récapitule. 4) Tu conclus en rappelant que c'est une démonstration NexusAI, que ce type d'agent répond vingt-quatre heures sur vingt-quatre à la place d'un répondeur, et tu invites à en parler avec l'équipe. Ne promets pas de vrais services, ne demande aucune donnée sensible. Si la personne pose une question hors sujet, réponds brièvement puis reviens à la démonstration.";
+
+function buildOverrides() {
+  return {
+    firstMessage: "Bonjour ! Je suis l'assistant vocal de démonstration de NexusAI. Pour vous montrer un exemple concret adapté à votre activité : dans quel domaine travaillez-vous ?",
+    maxDurationSeconds: MAX_SECONDS,
+    transcriber: { provider: "deepgram", model: "nova-2", language: "fr" },
+    voice: VOICES[pickedVoice],
+    startSpeakingPlan: { waitSeconds: 0.4 },
+    stopSpeakingPlan: { numWords: 0, voiceSeconds: 0.2, backoffSeconds: 1.0 },
+    model: {
+      provider: "openai",
+      model: "gpt-4o-mini",
+      messages: [{ role: "system", content: SYSTEM_PROMPT }]
+    }
+  };
+}
 
 const el  = (id) => document.getElementById(id);
 const btn = el("d-btn-call");
 const lbl = btn && btn.querySelector(".dlbl");
 const IDLE = "Parler à l'agent maintenant";
 const say = (msg, type) => { const s = el("d-status-3"); if (s) { s.textContent = msg || ""; s.className = "dstatus" + (type ? " " + type : ""); } };
+
+// sélecteur de voix (bloqué pendant un appel en cours)
+const pills = Array.prototype.slice.call(document.querySelectorAll(".vp"));
+pills.forEach((b) => b.addEventListener("click", () => {
+  if (live) return;
+  pickedVoice = b.getAttribute("data-voice") || "f1";
+  pills.forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+}));
 
 let Vapi = null, vapi = null, live = false, loadErr = false;
 
@@ -807,7 +842,7 @@ if (btn) btn.addEventListener("click", async () => {
       vapi.on("call-end",   () => { live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE; say("Démo terminée. Relance quand tu veux.", "ok"); });
       vapi.on("error", (e) => { console.error("Vapi error", e); live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE; say("Souci de connexion à l'agent. Réessaie.", "err"); });
     }
-    await vapi.start(VAPI_ASSISTANT_ID, OVERRIDES);
+    await vapi.start(VAPI_ASSISTANT_ID, buildOverrides());
   } catch (e) {
     console.error(e);
     live = false; btn.disabled = false; if (lbl) lbl.textContent = IDLE;
