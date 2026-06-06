@@ -28,9 +28,7 @@ window.NEXUS_CONFIG = {
 
   /* --- CONTACT (footer) -------------------------------- */
   contact: {
-    email:        "hello@nexusai-agency.fr",
-    phone:        "+596696531755",      /* format technique, sans espaces */
-    phoneDisplay: "+596 696 53 17 55"   /* format affiché à l'écran       */
+    email: "hello@nexusai-agency.fr"
   },
 
   /* --- PRIX & FORMULES (page Offres) ------------------- */
