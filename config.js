@@ -10,17 +10,12 @@
 window.NEXUS_CONFIG = {
 
   /* --- LIEN "RÉSERVER UN AUDIT" ------------------------ */
-  /* Ouvert par TOUS les boutons "Réserver un audit".      */
-  /* Par défaut = ton funnel d'audit. Mets ton lien Cal.com */
-  /* ici si tu préfères envoyer direct vers l'agenda.       */
-  cal: "https://audit.vitrineai.fr/",
+  cal: "https://cal.com/nexusaiagency.fwi/audit-decouverte",
 
   /* --- WEBHOOK "APPELEZ-MOI" (n8n) --------------------- */
-  /* Reçoit les demandes de rappel du formulaire landing.   */
   relay: "https://nexusaiagencyfwi.app.n8n.cloud/webhook/appelle-moi",
 
   /* --- LIENS DE PAIEMENT STRIPE ------------------------ */
-  /* Colle ici les 2 liens générés par stripe-setup.mjs.   */
   stripe: {
     starter: "REMPLACER_LIEN_STARTER",
     pro:     "REMPLACER_LIEN_PRO"
@@ -32,11 +27,26 @@ window.NEXUS_CONFIG = {
   },
 
   /* --- PRIX & FORMULES (page Offres) ------------------- */
-  /* Change un prix ici, il change sur la page.            */
+  /* Change un prix ici -> il change sur toutes les pages.  */
   packs: {
-    starter: { price: "129 €",     period: "/ mois", install: "+ 390 € d'installation" },
-    pro:     { price: "249 €",     period: "/ mois", install: "+ 790 € d'installation" },
-    scale:   { price: "dès 449 €", period: "/ mois", install: "installation dès 1 500 €" }
+    starter: {
+      price:   "149 €",
+      period:  "/ mois",
+      install: "+ 490 € d'installation",
+      frac:    "ou 4 × 123 €/mois pendant 4 mois"
+    },
+    pro: {
+      price:   "299 €",
+      period:  "/ mois",
+      install: "+ 990 € d'installation",
+      frac:    "ou 4 × 248 €/mois pendant 4 mois"
+    },
+    scale: {
+      price:   "499 €",
+      period:  "/ mois",
+      install: "+ 1 900 € d'installation fixe",
+      frac:    ""
+    }
   }
 
 };
